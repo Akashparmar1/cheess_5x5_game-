@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>5x5 Chess Game</title>
+    <style>
+        #chessboard {
+            display: grid;
+            grid-template-columns: repeat(5, 60px);
+            grid-template-rows: repeat(5, 60px);
+            border: 2px solid black;
+        }
+
+        .square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .white {
+            background-color: #f0d9b5;
+        }
+
+        .black {
+            background-color: #b58863;
+        }
+
+        .piece {
+            font-size: 2em;
+            cursor: pointer;
+        }
+
+        .selected {
+            border: 2px solid red;
+        }
+
+        #history {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chessboard"></div>
+    <button onclick="resetGame()">Reset Game</button>
+    <h3>History:</h3>
+    <div id="history"></div>
+
+    <script>
+        const pieces = {
+            'P': '♙',  // White Pawn
+            'p': '♟︎',  // Black Pawn
+            'R': '♖',  // White Rook
+            'r': '♜',  // Black Rook
+            'K': '♔',  // White King
+            'k': '♚'   // Black King
+        };
+
+        const initialBoard = [
+            ['r', ' ', ' ', ' ', 'R'],
+            ['p', ' ', ' ', ' ', 'P'],
+            [' ', ' ', 'k', ' ', ' '],
+            ['P', ' ', ' ', ' ', 'p'],
+            ['R', ' ', ' ', ' ', 'r']
+        ];
+
+        let board = JSON.parse(JSON.stringify(initialBoard));
+        let selectedPiece = null;
+        let currentPlayer = 'white';
+        let history = [];
+
+        function createBoard() {
+            const chessboard = document.getElementById('chessboard');
+            chessboard.innerHTML = '';
+            for (let row = 0; row < 5; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const square = document.createElement('div');
+                    square.className = 'square ' + ((row + col) % 2 === 0 ? 'white' : 'black');
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    if (board[row][col] !== ' ') {
+                        const piece = document.createElement('div');
+                        piece.className = 'piece';
+                        piece.textContent = pieces[board[row][col]];
+                        piece.dataset.row = row;
+                        piece.dataset.col = col;
+                        square.appendChild(piece);
+                        piece.onclick = () => selectPiece(row, col);
+                    }
+                    square.onclick = () => movePiece(row, col);
+                    chessboard.appendChild(square);
+                }
+            }
+        }
+
+        function selectPiece(row, col) {
+            const piece = board[row][col];
+            if ((currentPlayer === 'white' && piece === piece.toLowerCase()) ||
+                (currentPlayer === 'black' && piece === piece.toUpperCase())) {
+                return; // Not player's turn
+            }
+            if (selectedPiece) {
+                selectedPiece.classList.remove('selected');
+            }
+            selectedPiece = document.querySelector(`.piece[data-row='${row}'][data-col='${col}']`);
+            selectedPiece.classList.add('selected');
+        }
+
+        function movePiece(row, col) {
+            if (selectedPiece && isValidMove(selectedPiece, row, col)) {
+                const oldRow = parseInt(selectedPiece.dataset.row);
+                const oldCol = parseInt(selectedPiece.dataset.col);
+                board[row][col] = board[oldRow][oldCol];
+                board[oldRow][oldCol] = ' ';
+                history.push(`${currentPlayer}: ${board[row][col]} from (${oldRow}, ${oldCol}) to (${row}, ${col})`);
+                currentPlayer = currentPlayer === 'white' ? 'black' : 'white';
+                updateHistory();
+                createBoard();
+                selectedPiece = null;
+            }
+        }
+
+        function isValidMove(piece, newRow, newCol) {
+            const oldRow = parseInt(piece.dataset.row);
+            const oldCol = parseInt(piece.dataset.col);
+            const pieceType = board[oldRow][oldCol];
+            const targetPiece = board[newRow][newCol];
+
+            // Check if target is occupied by own piece
+            if ((currentPlayer === 'white' && targetPiece === targetPiece.toUpperCase() && targetPiece !== ' ') ||
+                (currentPlayer === 'black' && targetPiece === targetPiece.toLowerCase() && targetPiece !== ' ')) {
+                return false;
+            }
+
+            switch (pieceType.toLowerCase()) {
+                case 'p':
+                    // Pawns move forward one square (white moves up, black moves down)
+                    if (currentPlayer === 'white') {
+                        if (newRow === oldRow - 1 && newCol === oldCol && targetPiece === ' ') return true;
+                    } else {
+                        if (newRow === oldRow + 1 && newCol === oldCol && targetPiece === ' ') return true;
+                    }
+                    break;
+                case 'r':
+                    // Rooks move in straight lines horizontally or vertically
+                    if (newRow === oldRow || newCol === oldCol) return true;
+                    break;
+                case 'k':
+                    // Kings move one square in any direction
+                    if (Math.abs(newRow - oldRow) <= 1 && Math.abs(newCol - oldCol) <= 1) return true;
+                    break;
+            }
+
+            return false;
+        }
+
+        function updateHistory() {
+            document.getElementById('history').innerHTML = history.join('<br>');
+        }
+
+        function resetGame() {
+            board = JSON.parse(JSON.stringify(initialBoard));
+            history = [];
+            currentPlayer = 'white';
+            createBoard();
+            updateHistory();
+        }
+
+        createBoard();
+    </script>
+</body>
+</html>
